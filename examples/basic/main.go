@@ -5,8 +5,6 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"os"
-	"os/signal"
 	"syscall"
 	"time"
 
@@ -24,15 +22,7 @@ func main() {
 		log.Fatalf("Failed to listen: %s", err)
 	}
 
-	sigc := make(chan os.Signal, 1)
-	signal.Notify(sigc, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-
-	go func() {
-		select {
-		case <-sigc:
-			drainListener.Shutdown()
-		}
-	}()
+	drainListener.ShutdownWhenSignalsNotified(syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
 	http.Serve(drainListener, indexHandler(drainListener))
 }

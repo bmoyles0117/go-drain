@@ -3,6 +3,8 @@ package drain
 import (
 	"errors"
 	"net"
+	"os"
+	"os/signal"
 	"sync"
 
 	"github.com/pborman/uuid"
@@ -169,6 +171,20 @@ func (l *Listener) Shutdown() {
 	if l.parentListener != nil {
 		l.parentListener.Close()
 	}
+}
+
+// ShutdownForKillSignals is just a convenience method to spawn off a goroutine
+// that will catch any kill signals specified and trigger a shutdown.
+func (l *Listener) ShutdownWhenSignalsNotified(signals ...os.Signal) {
+	sigc := make(chan os.Signal, 1)
+	signal.Notify(sigc, signals...)
+
+	go func() {
+		select {
+		case <-sigc:
+			l.Shutdown()
+		}
+	}()
 }
 
 // Listen simply wraps a net.Listener as a Listener which also satisfies the
