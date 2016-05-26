@@ -24,7 +24,19 @@ func main() {
 
 	drainListener.ShutdownWhenSignalsNotified(syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
-	http.Serve(drainListener, indexHandler(drainListener))
+	mux := http.NewServeMux()
+	mux.Handle("/shutdown", shutdownHandler(drainListener))
+	mux.Handle("/", indexHandler(drainListener))
+
+	http.Serve(drainListener, mux)
+}
+
+func shutdownHandler(drainListener *drain.Listener) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		drainListener.Shutdown()
+
+		fmt.Fprint(w, "told listener to shutdown")
+	})
 }
 
 func indexHandler(drainListener *drain.Listener) http.Handler {
